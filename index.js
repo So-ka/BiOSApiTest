@@ -21,8 +21,10 @@ const db = {
 };
 
 function requireToken(req, res, next) {
-  const token = req.headers['authorization'];
-  if (!token || !db.tokens.includes(token)) return res.status(401).json({ error: 'Unauthorized' });
+  const token = req.query.token;
+  if (!token || !db.tokens.includes(token)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
   next();
 }
 
