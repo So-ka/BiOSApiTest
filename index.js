@@ -1,150 +1,179 @@
 const express = require('express');
+const bodyParser = require('body-parser');
 const app = express();
-const PORT = 5217;
+const port = 5217;
 
-app.use(express.json());
+app.use(bodyParser.json());
 
-let jobs = {};
-let jobResults = {};
-let picklists = {};
-let jobDetailData = {};
+const db = {
+  tokens: [],
+  users: [{ id: 'admin', password: '1234' }],
+  libraries: [],
+  containers: [],
+  jobs: [],
+  systems: [{ SystemId: 'abc123', SystemName: 'MockSystem', SystemDescription: null }],
+  picklists: [],
+  userroles: [
+    { RoleId: 'System Administrator', RoleName: 'System Administrator' },
+    { RoleId: 'Standard User', RoleName: 'Standard User' }
+  ],
+  results: []
+};
 
-function generateId() {
-  return Math.random().toString(36).substring(2, 34);
+function requireToken(req, res, next) {
+  const token = req.headers['authorization'];
+  if (!token || !db.tokens.includes(token)) return res.status(401).json({ error: 'Unauthorized' });
+  next();
 }
 
-function now() {
-  return new Date().toISOString();
-}
+// Auth
+app.post('/api/v11/users/:userId/sessions', (req, res) => {
+  const { userId } = req.params;
+  const { password } = req.body;
+  const user = db.users.find(u => u.id === userId && u.password === password);
+  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+  const token = `${userId}-token`;
+  db.tokens.push(token);
+  res.json({ SessionToken: token });
+});
 
-// --------------------- JOBS ---------------------
+// Alarms
+app.get('/api/v11/alarms', requireToken, (req, res) => {
+  res.json({ Items: db.alarms, CountedItems: db.alarms.length });
+});
 
-app.post('/api/v11/jobs', (req, res) => {
-  const jobId = generateId();
-  const { JobName, JobType, JobPriority = 100 } = req.body;
+// Automations
+app.get('/api/v11/automations', requireToken, (req, res) => {
+  res.json({ Items: db.automations, CountedItems: db.automations.length });
+});
 
-  const job = {
-    JobId: jobId,
-    JobName,
-    JobType,
-    JobPriority,
-    JobState: 'Complete',
-    CreatedBy: 'mockUser',
-    CreatedAt: now(),
-    StartDate: now(),
-    EndDate: now(),
-    JobProperties: req.body.JobProperties || [],
-    PredecessorJobIds: [],
-    SuccessorJobIds: [],
-    ProcessLogs: [
-      {
-        ID: generateId(),
-        Start: now(),
-        End: now(),
-        FinishReason: 'Completed',
-        ErrorItem: null
-      }
-    ],
-    JobValidationResults: [
-      {
-        Id: generateId(),
-        RuleId: 'JME-ValidationRule-0001',
-        ActionType: 'Pre',
-        Pass: true,
-        RuleDescription: 'Mock Rule',
-        Description: 'Passed Mock Rule'
-      }
-    ],
-    UserRights: []
-  };
+// Systems
+app.get('/api/v11/systems', (req, res) => {
+  res.json({ Items: db.systems, CountedItems: db.systems.length });
+});
 
-  jobs[jobId] = job;
+// Libraries
+app.get('/api/v11/libraries', requireToken, (req, res) => {
+  res.json({ Items: db.libraries, CountedItems: db.libraries.length });
+});
 
-  // store result
-  jobResults[jobId] = {
-    Items: [
-      {
-        ResultId: generateId(),
-        ResultClassifiers: JobType,
-        IsAbnormal: false,
-        CreatedAt: now(),
-        ContainerId: generateId(),
-        Identifiers: [
-          {
-            BarcodeTyp: 'ECC 200',
-            BarcodeValue: `BAR-${jobId.slice(0, 6)}`,
-            LabwareDefinitionId: 'LabwareDef_MOCK'
-          }
-        ],
-        ContainerCustomAttribute: [],
-        ParentPositionIndex: null,
-        ParentPositionLabel: null,
-        LocationDescription: 'Freezer Mock Location',
-        LocationSequence: '1',
-        LocationId: 'LOC123',
-        LabwareDefinitionId: 'LabwareDef_RACK_HAM_MOCK',
-        LabwareType: 'TubeRack',
-        Children: []
-      }
-    ],
-    SkippedItems: 0,
-    TakenItems: 1,
-    CountedItems: 1
-  };
+app.post('/api/v11/libraries', requireToken, (req, res) => {
+  const lib = { ...req.body, LibraryId: `lib-${Date.now()}` };
+  db.libraries.push(lib);
+  res.status(201).json(lib);
+});
 
+app.delete('/api/v11/libraries/:libraryId', requireToken, (req, res) => {
+  const index = db.libraries.findIndex(lib => lib.LibraryId === req.params.libraryId);
+  if (index === -1) return res.status(404).send();
+  db.libraries.splice(index, 1);
+  res.status(204).send();
+});
+
+app.put('/api/v11/libraries/:libraryId', requireToken, (req, res) => {
+  const lib = db.libraries.find(lib => lib.LibraryId === req.params.libraryId);
+  if (!lib) return res.status(404).send();
+  Object.assign(lib, req.body);
+  res.json(lib);
+});
+
+app.post('/api/v11/libraries/:libraryId/containers', requireToken, (req, res) => {
+  const { libraryId } = req.params;
+  const lib = db.libraries.find(l => l.LibraryId === libraryId);
+  if (!lib) return res.status(404).json({ error: 'Library not found' });
+  lib.containers = lib.containers || [];
+  lib.containers.push(...req.body.Items);
+  res.status(200).json({ added: req.body.Items.length });
+});
+
+// Containers
+app.get('/api/v11/containers', requireToken, (req, res) => {
+  res.json({ Items: db.containers, CountedItems: db.containers.length });
+});
+
+app.post('/api/v11/containers', requireToken, (req, res) => {
+  const { Items } = req.body;
+  Items.forEach(container => {
+    container.ContainerId = `container-${Date.now()}-${Math.random()}`;
+    db.containers.push(container);
+  });
+  res.status(201).json({ Items });
+});
+
+// Jobs
+app.get('/api/v11/jobs', requireToken, (req, res) => {
+  res.json({ Items: db.jobs, CountedItems: db.jobs.length });
+});
+
+app.post('/api/v11/jobs', requireToken, (req, res) => {
+  const job = { ...req.body, JobId: `job-${Date.now()}` };
+  db.jobs.push(job);
+  res.status(201).json(job);
+});
+
+app.put('/api/v11/jobs/:jobId', requireToken, (req, res) => {
+  const job = db.jobs.find(j => j.JobId === req.params.jobId);
+  if (!job) return res.status(404).send();
+  Object.assign(job, req.body);
   res.json(job);
 });
 
-app.get('/api/v11/jobs/:jobId', (req, res) => {
-  const job = jobs[req.params.jobId];
-  if (!job) return res.status(404).json({ error: 'Job not found' });
-  res.json(job);
+app.delete('/api/v11/jobs/:jobId', requireToken, (req, res) => {
+  const index = db.jobs.findIndex(j => j.JobId === req.params.jobId);
+  if (index === -1) return res.status(404).send();
+  db.jobs.splice(index, 1);
+  res.status(204).send();
 });
 
-app.get('/api/v11/jobs/:jobId/results', (req, res) => {
-  const results = jobResults[req.params.jobId];
-  if (!results) return res.status(404).json({ error: 'Results not found' });
-  res.json(results);
+// Results
+app.get('/api/v11/results', requireToken, (req, res) => {
+  res.json({ Items: db.results, CountedItems: db.results.length });
 });
 
-// --------------------- PICKLISTS ---------------------
-
-app.get('/api/v11/picklists/:picklistId', (req, res) => {
-  const id = req.params.picklistId;
-  const result = picklists[id] || {
-    ResultId: id,
-    ResultClassifiers: 'PicklistGenerated',
-    ContainerId: generateId(),
-    Identifiers: [
-      {
-        BarcodeTyp: 'Code 128',
-        BarcodeValue: 'PKL-' + id.slice(0, 6),
-        LabwareDefinitionId: 'LabwareDef_TUBE_HAM_2p0mL'
-      }
-    ],
-    Children: []
-  };
-  res.json(result);
+// Picklists
+app.post('/api/v11/picklists', requireToken, (req, res) => {
+  const picklist = { ...req.body, PicklistId: `pick-${Date.now()}` };
+  db.picklists.push(picklist);
+  res.status(201).json(picklist);
 });
 
-// --------------------- JOB DETAIL DATA ---------------------
-
-app.get('/api/v11/jobs/:jobId/detail', (req, res) => {
-  const id = req.params.jobId;
-  const detail = jobDetailData[id] || {
-    ItemId: id,
-    ItemUri: `http://localhost:${PORT}/api/v11/jobs/${id}`,
-    ItemType: 'JobDetailData'
-  };
-  res.json(detail);
+app.post('/api/v11/picklists/:picklistId/containers', requireToken, (req, res) => {
+  const { picklistId } = req.params;
+  const picklist = db.picklists.find(p => p.PicklistId === picklistId);
+  if (!picklist) return res.status(404).json({ error: 'Picklist not found' });
+  picklist.containers = picklist.containers || [];
+  picklist.containers.push(...req.body.Items);
+  res.status(200).json({ added: req.body.Items.length });
+});
+app.get('/api/v11/picklists', requireToken, (req, res) => {
+  res.json({ Items: db.picklists, CountedItems: db.picklists.length });
 });
 
-// --------------------- HEALTH ---------------------
-
-app.get('/api/v11/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: now() });
+app.get('/api/v11/picklists/:picklistId', requireToken, (req, res) => {
+  const picklist = db.picklists.find(p => p.PicklistId === req.params.picklistId);
+  if (!picklist) return res.status(404).send();
+  res.json(picklist);
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Mock Hamilton API running at http://localhost:${PORT}`);
+app.put('/api/v11/picklists/:picklistId', requireToken, (req, res) => {
+  const picklist = db.picklists.find(p => p.PicklistId === req.params.picklistId);
+  if (!picklist) return res.status(404).send();
+  Object.assign(picklist, req.body);
+  res.json(picklist);
+});
+
+app.delete('/api/v11/picklists/:picklistId', requireToken, (req, res) => {
+  const index = db.picklists.findIndex(p => p.PicklistId === req.params.picklistId);
+  if (index === -1) return res.status(404).send();
+  db.picklists.splice(index, 1);
+  res.status(204).send();
+});
+
+// UserRoles
+app.get('/api/v11/userroles', requireToken, (req, res) => {
+  res.json({ Items: db.userroles, CountedItems: db.userroles.length });
+});
+
+app.listen(port, () => {
+  console.log(`Mock Hamilton API running at http://localhost:${port}`);
 });
