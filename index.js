@@ -1,3 +1,4 @@
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const app = express();
@@ -11,13 +12,15 @@ const db = {
   libraries: [],
   containers: [],
   jobs: [],
+  results: [],
   systems: [{ SystemId: 'abc123', SystemName: 'MockSystem', SystemDescription: null }],
   picklists: [],
   userroles: [
     { RoleId: 'System Administrator', RoleName: 'System Administrator' },
     { RoleId: 'Standard User', RoleName: 'Standard User' }
   ],
-  results: []
+  alarms: [],
+  automations: []
 };
 
 function requireToken(req, res, next) {
@@ -132,6 +135,32 @@ app.get('/api/v11/results', requireToken, (req, res) => {
   res.json({ Items: db.results, CountedItems: db.results.length });
 });
 
+// GET /jobs/:jobId/results
+app.get('/api/v11/jobs/:jobId/results', requireToken, (req, res) => {
+  const { jobId } = req.params;
+  const take = parseInt(req.query.take) || 100;
+  const skip = parseInt(req.query.skip) || 0;
+
+  const results = db.results.filter(r => r.JobId === jobId && !r.ParentResultId);
+  const sliced = results.slice(skip, skip + take);
+  res.json({
+    Items: sliced,
+    SkippedItems: skip,
+    TakenItems: sliced.length,
+    CountedItems: results.length
+  });
+});
+
+// GET /jobs/:jobId/results/:resultId
+app.get('/api/v11/jobs/:jobId/results/:resultId', requireToken, (req, res) => {
+  const { jobId, resultId } = req.params;
+  const result = db.results.find(r => r.JobId === jobId && r.ResultId === resultId);
+  if (!result) return res.status(404).json({ error: 'Result not found' });
+
+  const children = db.results.filter(r => r.ParentResultId === resultId);
+  res.json({ ...result, Children: children });
+});
+
 // Picklists
 app.post('/api/v11/picklists', requireToken, (req, res) => {
   const picklist = { ...req.body, PicklistId: `pick-${Date.now()}` };
@@ -147,6 +176,7 @@ app.post('/api/v11/picklists/:picklistId/containers', requireToken, (req, res) =
   picklist.containers.push(...req.body.Items);
   res.status(200).json({ added: req.body.Items.length });
 });
+
 app.get('/api/v11/picklists', requireToken, (req, res) => {
   res.json({ Items: db.picklists, CountedItems: db.picklists.length });
 });
