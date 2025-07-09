@@ -9,12 +9,92 @@ app.use(bodyParser.json());
 const db = {
   tokens: [],
   users: [{ id: 'admin', password: '1234' }],
-  libraries: [],
-  containers: [],
-  jobs: [],
+  libraries: [{ 
+  "LibraryId": "Quarantine", 
+  "LibraryDescription": "Used to store potentially contaminated samples", 
+  "LibraryType": "Quarantine", 
+  "AreaIndexPref": 0, 
+  "Orientation": "Static" 
+} ],
+  containers: [{ 
+  "ContainerId": "4d283790bfa449acb7bc418a0eae4d3f", 
+  "ParentId": null, 
+  "Parent": null, 
+  "LabwareDefinitionId": "LabwareDef-StorageTray-Vials----", 
+  "LabwareType": "StorageTray", 
+  "LabwareStatus": "OK", 
+  "LabwareId": 1, 
+  "Inactive": false, 
+  "RegistrationState": "Unregistered", 
+  "ContainerLocation": "Device", 
+  "Identifiers": [{ 
+   "BarcodeTyp": "ECC 200", 
+   "BarcodeValue": "0c3c0877-74ba-4f5a-8ad9-f9b174d386e3", 
+   "LabwareDefinitionId": "LabwareDef-StorageTray-Vials----" 
+  }], 
+  "PositionIndex": null, 
+  "PositionLabel": null, 
+  "PositionDescription": null, 
+  "LocationDescription": "Tray Storage A5.2, Column 1, Shelf 1", 
+  "LocationSequence": 1, 
+  "Attributes": [] 
+ }],
+  jobs: [ { 
+            "JobId": "118baec590c2468ab19e7e9528214073", 
+            "JobName": "Introduce Storage Trays", 
+            "JobPriority": 100, 
+            "JobType": "Introduce", 
+            "JobState": "Complete", 
+            "CreatedBy": "Adminsys", 
+            "CreatedAt": "2014-09-05T08:40:08.6581522+02:00", 
+            "StartDate": "2014-09-05T08:40:09.4413088+02:00", 
+            "EndDate": "2014-09-05T08:40:15.0154234+02:00" 
+        }, 
+        { 
+            "JobId": "250278c705a14ff79cf6ebc8d0d8d3ac", 
+            "JobName": "Store for 'Introduce Transport Trays'", 
+            "JobPriority": 50, 
+            "JobType": "Store", 
+            "JobState": "Running", 
+            "CreatedBy": "Adminsys", 
+            "CreatedAt": "2014-09-05T08:40:24.8983996+02:00", 
+            "StartDate": "2014-09-05T08:40:25.0784356+02:00", 
+            "EndDate": null 
+        }, 
+        { 
+            "JobId": "2fde25a664164a6aa03cb86f3c2d2ddb", 
+            "JobName": "Introduce Transport Trays", 
+            "JobPriority": 100, 
+            "JobType": "Introduce", 
+            "JobState": "Complete", 
+            "CreatedBy": "Adminsys", 
+            "CreatedAt": "2014-09-05T08:40:18.004021+02:00", 
+            "StartDate": "2014-09-05T08:40:18.104041+02:00", 
+            "EndDate": "2014-09-05T08:40:24.8223844+02:00" 
+        }, 
+        { 
+            "JobId": "af4193a98b4749778639f4b41448be05", 
+            "JobName": "Store for 'Introduce Storage Trays'", 
+            "JobPriority": 50, 
+            "JobType": "Store", 
+            "JobState": "Complete", 
+            "CreatedBy": "Adminsys", 
+            "CreatedAt": "2014-09-05T08:40:15.1794562+02:00", 
+            "StartDate": "2014-09-05T08:40:15.3714946+02:00", 
+            "EndDate": "2014-09-05T08:40:15.7825768+02:00" 
+        } ],
   results: [],
   systems: [{ SystemId: 'abc123', SystemName: 'MockSystem', SystemDescription: null }],
-  picklists: [],
+  picklists:[ 
+        { 
+            "PicklistId": "087730e82d834af8baecc1c46fa854b2", 
+            "PicklistName": "Picklist 2 Items" 
+        }, 
+        { 
+            "PicklistId": "94acb4daffa54979b91d6564d4e5b03f", 
+            "PicklistName": "New Picklist 1" 
+        } 
+    ],
   userroles: [
     { RoleId: 'System Administrator', RoleName: 'System Administrator' },
     { RoleId: 'Standard User', RoleName: 'Standard User' }
