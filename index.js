@@ -191,6 +191,7 @@ app.get('/api/v11/jobs', requireToken, (req, res) => {
 });
 
 app.post('/api/v11/jobs', requireToken, (req, res) => {
+  console.log(`JOB CREATED :`,req);
   const job = { ...req.body, JobId: `job-${Date.now()}` };
   db.jobs.push(job);
   res.status(201).json(job);
