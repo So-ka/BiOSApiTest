@@ -112,15 +112,11 @@ function attachChildren(result, allResults) {
 
 const db = {
   jobs: [],
-  results: []
+  results: [],
+  picklists: []
 }
 
-
-
 const jobStates = ['Pending', 'Running', 'Complete'];
-//
-
-
 
 // Auth
 app.post('/api/v11/users/:userId/sessions', (req, res) => {
@@ -215,6 +211,31 @@ app.get('/api/v11/jobs/:jobId/results/:resultId', requireToken, (req, res) => {
 
   const fullResult = attachChildren({ ...result }, allResults);
   res.status(200).json(fullResult);
+});
+
+//Picklist
+app.post('/api/v11/picklists', requireToken, (req, res) => {
+  const { PicklistName } = req.body;
+
+  if (!PicklistName) {
+    return res.status(400).json({ message: 'PicklistName is required' });
+  }
+
+  const newPicklistId = crypto.randomUUID();
+  const picklist = {
+    PicklistId: newPicklistId,
+    PicklistName,
+    CreatedAt: new Date().toISOString()
+  };
+
+  db.picklists.push(picklist);
+
+  res.status(201).json({
+    ItemId: newPicklistId,
+    ItemUri: `http://localhost:18898/api/v11/picklists/${newPicklistId}`,
+    ItemType: "PicklistDetailData"
+  });
+  console.log(`Picklist created:`, db.picklists);
 });
 
 //APILOGIC
