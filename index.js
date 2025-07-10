@@ -112,7 +112,7 @@ const db = {
   jobs: [],
   results: []
 }
-db.results.push(result);
+
 
 
 const jobStates = ['Pending', 'Running', 'Complete'];
