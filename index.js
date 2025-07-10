@@ -67,7 +67,7 @@ function simulateJobLifecycle(job) {
         ResultId: generateId(),
         ParentResultId: null,
         PredecessorJobId: job.JobId,
-        ResultClassifiers: jobTypeToClassifier[job.JobType] || "Identified",
+        ResultClassifiers: "Identified",
         IsAbnormal: false,
         CreatedAt: new Date().toISOString(),
         Message: `Result for completed job ${job.JobId}`,
