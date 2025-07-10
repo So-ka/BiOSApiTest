@@ -13,7 +13,15 @@ function requireToken(req, res, next) {
 const db = {
   jobs: [],
 }
+// Auth
+app.post('/api/v11/users/:userId/sessions', (req, res) => {
+  const { userId } = req.params;
+  const { password } = req.body;
+  const token = `${userId}-token`;
+  res.json({ SessionToken: token });
+});
 
+//jobs
 app.post('/api/v11/jobs', requireToken, (req, res) => {
   //controle how jobs are stored
   const newjobid = `job-${Date.now()}`;
