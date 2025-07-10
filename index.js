@@ -21,7 +21,7 @@ app.post('/api/v11/users/:userId/sessions', (req, res) => {
   res.json({ SessionToken: token });
 });
 
-//jobs
+//CreateNewjob
 app.post('/api/v11/jobs', requireToken, (req, res) => {
   //controle how jobs are stored
   const newjobid = `job-${Date.now()}`;
@@ -60,10 +60,10 @@ app.post('/api/v11/jobs', requireToken, (req, res) => {
   console.log(`JOB CREATED :`,db);
   res.status(201).json(result);
 });
-
+//CreateSpecificJob
 app.get('/api/v11/jobs/:jobId', (req, res) => {
   const jobId = req.params.jobId;
-  const job = jobs.find(j => j.JobId === jobId);
+  const job = db.jobs.find(j => j.JobId === jobId);
   if (job) {
     res.json(job);
   } else {
