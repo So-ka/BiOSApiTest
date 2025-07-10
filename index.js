@@ -1,6 +1,7 @@
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const crypto = require('crypto');
 const app = express();
 const port = 5217;
 
@@ -10,9 +11,100 @@ function requireToken(req, res, next) {
   next();
 }
 
+//BUSINESS LOGIC
+function generateId() {
+  return crypto.randomUUID(); // Node >= 14.17
+}
+
+function createInitialResult(job) {
+  const result = {
+    ResultId: generateId(),
+    ParentResultId: null,
+    PredecessorJobId: job.JobId,
+    ResultClassifiers: "Identified",
+    IsAbnormal: false,
+    CreatedAt: new Date().toISOString(),
+    Message: null,
+    ContainerId: generateId(),
+    Identifiers: [
+      {
+        BarcodeTyp: "2 of 5 Interleaved",
+        BarcodeValue: generateId(),
+        LabwareDefinitionId: "LabwareDef-VialTransparentCap---"
+      }
+    ],
+    PositionIndex: null,
+    PositionLabel: null,
+    LocationDescription: "Star Picker Jaw Location",
+    LocationSequence: 3,
+    LocationId: 2020202003,
+    LabwareDefinitionId: "LabwareDef-VialTransparentCap---",
+    LabwareType: "Vial",
+    Children: []
+  };
+
+  return result;
+}
+
+//Simulate Job LifeCycle : PENDING -> RUNNING -> COMPLETE
+function simulateJobLifecycle(job) {
+  let stateIndex = 0;
+  job.JobState = jobStates[stateIndex];
+
+  const interval = setInterval(() => {
+    stateIndex++;
+
+    if (stateIndex < jobStates.length) {
+      job.JobState = jobStates[stateIndex];
+      console.log(`Job ${job.JobId} moved to ${job.JobState}`);
+    } else {
+      clearInterval(interval);
+      job.EndDate = new Date().toISOString();
+      console.log(`Job ${job.JobId} completed`);
+
+      //Create result now that job is complete
+      const result = {
+        ResultId: generateId(),
+        ParentResultId: null,
+        PredecessorJobId: job.JobId,
+        ResultClassifiers: jobTypeToClassifier[job.JobType] || "Identified",
+        IsAbnormal: false,
+        CreatedAt: new Date().toISOString(),
+        Message: `Result for completed job ${job.JobId}`,
+        ContainerId: generateId(),
+        Identifiers: [
+          {
+            BarcodeTyp: "2 of 5 Interleaved",
+            BarcodeValue: generateId(),
+            LabwareDefinitionId: "LabwareDef-VialTransparentCap---"
+          }
+        ],
+        PositionIndex: null,
+        PositionLabel: null,
+        LocationDescription: "Star Picker Jaw Location",
+        LocationSequence: 3,
+        LocationId: 2020202003,
+        LabwareDefinitionId: "LabwareDef-VialTransparentCap---",
+        LabwareType: "Vial",
+        Children: []
+      };
+
+      db.results.push(result);
+    }
+  }, 3000);
+}
+
+
 const db = {
   jobs: [],
+  results: []
 }
+
+const jobStates = ['Pending', 'Running', 'Complete'];
+//
+
+
+
 // Auth
 app.post('/api/v11/users/:userId/sessions', (req, res) => {
   const { userId } = req.params;
@@ -30,15 +122,13 @@ app.post('/api/v11/jobs', requireToken, (req, res) => {
               "JobPriority": req.body.JobPriority || 0, 
               "JobName": req.body.JobName, 
               "JobType": req.body.JobType, 
-              "JobState": "Complete", 
+              "JobState": jobStates[0], 
               "CreatedBy": "admin", 
               "CreatedAt": "2015-01-19T07:21:09+01:00", 
               "StartDate": "2015-01-19T07:21:09.33+01:00", 
               "EndDate": "2015-01-19T07:21:10.087+01:00", 
               "JobProperties": req.body.JobProperties || [], 
-              "PredecessorJobIds": [ 
-                "7ad5ebe1c3d44429960c9254591cb42a" 
-              ], 
+              "PredecessorJobIds": [], 
               "SuccessorJobIds": [], 
               "ProcessLogs": [ 
                 { 
@@ -52,14 +142,16 @@ app.post('/api/v11/jobs', requireToken, (req, res) => {
               "UserRights": [] 
   }
   db.jobs.push(job);
+  simulateJobLifecycle(job);
   result = {
     "ItemId": newjobid, 
     "ItemUri": "https://biosapitest.onrender.com/api/v11/jobs/"+newjobid, 
     "ItemType": "JobDetailData" 
-    } 
+    }
   console.log(`JOB CREATED :`,db);
   res.status(201).json(result);
 });
+
 //CreateSpecificJob
 app.get('/api/v11/jobs/:jobId', (req, res) => {
   const jobId = req.params.jobId;
@@ -71,8 +163,23 @@ app.get('/api/v11/jobs/:jobId', (req, res) => {
   }
 });
 
+//GetSpecificJobResults
+app.get('/api/v11/jobs/:jobId/results', requireToken, (req, res) => {
+  const { jobId } = req.params;
+  const take = parseInt(req.query.take) || 100;
+  const skip = parseInt(req.query.skip) || 0;
 
-//api
+  const results = db.results.filter(r => r.JobId === jobId && !r.ParentResultId);
+  const sliced = results.slice(skip, skip + take);
+  res.json({
+    Items: sliced,
+    SkippedItems: skip,
+    TakenItems: sliced.length,
+    CountedItems: results.length
+  });
+});
+
+//APILOGIC
 app.listen(port, () => {
   console.log(`Mock Hamilton API running at http://localhost:${port}`);
 });
