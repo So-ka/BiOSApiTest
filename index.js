@@ -61,9 +61,9 @@ function simulateJobLifecycle(job) {
         Children: []
       };
       db.results.push(result);
-      if(db.results.length == 1) {
+      
       // Create 2 child results
-      for (let i = 0; i < 2; i++) {
+      for (let i = 0; i < 1; i++) {
         const childResult = {
           ...result,
           ResultId: generateId(),
@@ -98,7 +98,7 @@ function simulateJobLifecycle(job) {
         db.results.push(childResult);
     };
         
-      }
+      
     }
   }, 15000);
 }
