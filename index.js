@@ -113,7 +113,8 @@ function attachChildren(result, allResults) {
 const db = {
   jobs: [],
   results: [],
-  picklists: []
+  picklists: [],
+  picklistContainers: {} 
 }
 
 const jobStates = ['Pending', 'Running', 'Complete'];
@@ -232,11 +233,65 @@ app.post('/api/v11/picklists', requireToken, (req, res) => {
 
   res.status(201).json({
     ItemId: newPicklistId,
-    ItemUri: `http://localhost:18898/api/v11/picklists/${newPicklistId}`,
+    ItemUri: `https://biosapitest.onrender.com/api/v11/picklists/${newPicklistId}`,
     ItemType: "PicklistDetailData"
   });
   console.log(`Picklist created:`, db.picklists);
 });
+
+app.post('/api/v11/picklists/:picklistId/containers', requireToken, (req, res) => {
+  const { picklistId } = req.params;
+  const { Items = [], TargetPositions = [] } = req.body;
+
+  // Check if picklist exists
+  const picklist = db.picklists.find(p => p.PicklistId === picklistId);
+  if (!picklist) {
+    return res.status(404).json({ message: 'Picklist not found' });
+  }
+
+  if (!Array.isArray(Items)) {
+    return res.status(400).json({ message: 'Items array required' });
+  }
+
+  // Initialize picklist container map if not already
+  if (!db.picklistContainers[picklistId]) {
+    db.picklistContainers[picklistId] = [];
+  }
+
+  const rejected = [];
+
+  for (const item of Items) {
+    // Basic validation: must have IdentifierValue (minimal valid format)
+    if (!item.IdentifierValue) {
+      rejected.push({
+        Identifier: item,
+        Reason: 'Missing IdentifierValue'
+      });
+      continue;
+    }
+
+    // Avoid duplicates
+    const alreadyAssigned = db.picklistContainers[picklistId].some(c => c.IdentifierValue === item.IdentifierValue);
+    if (alreadyAssigned) {
+      rejected.push({
+        Identifier: item,
+        Reason: 'Already assigned'
+      });
+      continue;
+    }
+
+    // Add to picklist container list
+    db.picklistContainers[picklistId].push({
+      ...item,
+      TargetPositions: TargetPositions || []
+    });
+  }
+
+  res.status(200).json({
+    RejectedIdentifiers: rejected
+  });
+});
+
 
 //APILOGIC
 app.listen(port, () => {
