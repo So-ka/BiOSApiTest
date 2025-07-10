@@ -94,8 +94,10 @@ function simulateJobLifecycle(job) {
                     "LabwareDefinitionId": "LabwareDef-VialWhiteCap---------" 
                 }
             ],
-        }};
+        }
         db.results.push(childResult);
+    };
+        
       }
     }
   }, 15000);
