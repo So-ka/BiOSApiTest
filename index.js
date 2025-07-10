@@ -91,7 +91,7 @@ function simulateJobLifecycle(job) {
 
       db.results.push(result);
     }
-  }, 3000);
+  }, 5000);
 }
 
 
