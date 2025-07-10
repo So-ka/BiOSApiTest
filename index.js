@@ -261,17 +261,17 @@ app.post('/api/v11/picklists/:picklistId/containers', requireToken, (req, res) =
   const rejected = [];
 
   for (const item of Items) {
-    // Basic validation: must have IdentifierValue (minimal valid format)
-    if (!item.IdentifierValue) {
+    // Basic validation: must have BarcodeValue (minimal valid format)
+    if (!item.BarcodeValue) {
       rejected.push({
         Identifier: item,
-        Reason: 'Missing IdentifierValue'
+        Reason: 'Missing BarcodeValue'
       });
       continue;
     }
 
     // Avoid duplicates
-    const alreadyAssigned = db.picklistContainers[picklistId].some(c => c.IdentifierValue === item.IdentifierValue);
+    const alreadyAssigned = db.picklistContainers[picklistId].some(c => c.BarcodeValue === item.BarcodeValue);
     if (alreadyAssigned) {
       rejected.push({
         Identifier: item,
