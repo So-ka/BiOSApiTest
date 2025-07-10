@@ -27,3 +27,7 @@ app.post('/api/v11/jobs', requireToken, (req, res) => {
   console.log(`JOB CREATED :`,db);
   res.status(201).json(result);
 });
+
+app.listen(port, () => {
+  console.log(`Mock Hamilton API running at http://localhost:${port}`);
+});
